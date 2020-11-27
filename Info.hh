@@ -99,8 +99,8 @@ public:
       grid[row][col].id = id;
       if (type == 'b') player2builders[pl].insert(id);
       else {
-	_my_assert(type == 'w', "Wrong type of citizen in grid format");
-	player2warriors[pl].insert(id);
+	      _my_assert(type == 'w', "Wrong type of citizen in grid format");
+	      player2warriors[pl].insert(id);
       }
     }
 
