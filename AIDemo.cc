@@ -39,7 +39,7 @@ struct PLAYER_NAME : public Player {
     if (st >= 0.9) return;
 
     // If more than halfway through, do nothing.
-    if (round() > num_rounds()/2) return;
+    
 
     // Write debugging info about barricades
     vector<Pos> bs = barricades(me());
