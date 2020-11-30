@@ -9,6 +9,8 @@
         "xlocmon": "cpp",
         "xlocnum": "cpp",
         "xloctime": "cpp",
-        "__locale": "cpp"
+        "__locale": "cpp",
+        "iosfwd": "cpp",
+        "iterator": "cpp"
     }
 }
