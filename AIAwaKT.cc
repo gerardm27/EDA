@@ -23,6 +23,12 @@ struct PLAYER_NAME : public Player {
    */
   const vector<Dir> dirs = {Up,Down,Left,Right};
   const int LOSES_TO_BATTLE = 20;
+  bool pos_street(Pos p){
+    return (pos_ok(p) && cell(p).type != Building);
+  }
+  bool pos_safe(Pos p){
+    return (pos_ok(p) && cell(p).type == Street && cell(p).id == -1);
+  }
   void llenar_vectores(vector<Pos>& Comida, vector<Pos>& Dinero, vector<Pos>& Pistolas, vector<Pos>& Bazookas, vector<Pos>& Enemigos){
     int max_i = board_rows();
     int max_j = board_cols();
@@ -38,23 +44,33 @@ struct PLAYER_NAME : public Player {
       }
     }
   }
-
-  Pos posicion_mas_cercana(vector<Pos>& v_pos, int id, string tipo){
-    switch(tipo){
-      case "comida":
-        for(int i = 0; i < v_pos; ++i){
-          
+  
+  Dir mejor_direccion(vector<Pos>& v_pos, int id){
+    Pos smaller; Pos final; Pos mypos = citizen(id).pos;
+    int aux_i; int aux_j;
+    for(uint i = 0; i < v_pos.size(); ++i){
+      if(i == 0) {
+        smaller.i = pow(v_pos[i].i - mypos.i,2); //Me guardo el primer valor para comparaciones
+        smaller.j = pow(v_pos[i].j - mypos.j,2); //Me guardo el segundo valor para comparaciones
+        final.i = v_pos[i].i; //Me guardo el primer valor sin operar
+        final.j = v_pos[i].j; //Me guardo el primer valor sin operar
+      }
+      else{
+        aux_i = pow(v_pos[i].i - mypos.i,2);
+        aux_j = pow(v_pos[i].j - mypos.j,2);
+        if(aux_i + aux_j < smaller.i + smaller.j){
+          smaller.i = aux_i;
+          smaller.j = aux_j;
+          final.i = v_pos[i].i;
+          final.j = v_pos[i].j;
         }
-        break;
-      case "dinero":
-        break;
-      case "pistolas":
-        break;
-      case "bazookas":
-        break;
-      case "enemigos":
-        break;
+      }
     }
+    if(mypos.j < final.j && pos_safe(mypos + Right)) return Right;
+    if(mypos.j > final.j && pos_safe(mypos + Left)) return Left;
+    if(mypos.i < final.i && pos_safe(mypos + Down)) return Down;
+    if(mypos.i > final.i && pos_safe(mypos + Up)) return Up;
+    return dirs[random(0,3)];
   }
 
   /**
@@ -76,10 +92,10 @@ struct PLAYER_NAME : public Player {
         bool moved = false;
         Pos p = citizen(id).pos;
         for(Dir d : dirs){
-          if(pos_ok(p+d)){
+          if(pos_safe(p+d)){
             if(cell(p+d).bonus == Food && citizen(id).life <= citizen_ini_life(Warrior)/2) {pref1 = true; pref1dir = d;}
             else if(cell(p+d).weapon == Bazooka) {pref2 = true; pref2dir = d;}
-            else if(cell(p+d).weapon == Gun && (citizen(id).weapon == Hammer)) {pref3 = true; pref3dir = d;}
+            else if(cell(p+d).weapon == Gun && citizen(id).weapon == Hammer) {pref3 = true; pref3dir = d;}
             else if(cell(p+d).bonus == Money) {pref4 = true; pref4dir = d;}
           }
         }
@@ -88,18 +104,17 @@ struct PLAYER_NAME : public Player {
         else if(pref3) move(id, pref3dir);
         else if(pref4) move(id, pref4dir);
         else{
-          //Pos pos = pathfinding();
-          if(pos_ok(/*pos */){
-            move(id, pos);
+          if(citizen(id).life <= citizen_ini_life(Warrior)/2){
+            move(id, mejor_direccion(Comida, id));
+          }
+          else if(citizen(id).weapon == Hammer){
+            move(id, mejor_direccion(Pistolas, id));
+          }
+          else if(citizen(id).weapon == Gun){
+            move(id,mejor_direccion(Bazookas, id));
           }
           else{
-            while(!moved){
-              Dir nd = dirs[random(0,3)];
-              if(pos_ok(p+dirs[nd])){
-                move(id,nd);
-                moved = true;
-              }
-            }
+            move(id,mejor_direccion(Dinero, id));
           }
         }
       }
@@ -110,7 +125,7 @@ struct PLAYER_NAME : public Player {
         bool moved = false;
         Pos p = citizen(id).pos;
         for(Dir d : dirs){
-          if(pos_ok(p+d)){
+          if(pos_safe(p+d)){
             if(cell(p+d).bonus == Food && citizen(id).life <= citizen_ini_life(Builder)/2) {pref1 = true; pref1dir = d;}
             else if(cell(p+d).bonus == Money) {pref2 = true; pref2dir = d;}
           }
@@ -118,14 +133,13 @@ struct PLAYER_NAME : public Player {
         if(pref1) move(id, pref1dir);
         else if(pref2) move(id, pref2dir);
         else{
-          while(!moved){
-            Dir nd = dirs[random(0,3)];
-            if(pos_ok(p+dirs[nd])){
-              move(id,nd);
-              moved = true;
-            }
+          if(citizen(id).life <= citizen_ini_life(Builder)/2){
+            move(id, mejor_direccion(Comida, id));
           }
-        } 
+          else{
+            move(id,mejor_direccion(Dinero, id));
+          }
+        }
       }
     }
     else {        //Si es de nit
@@ -137,7 +151,7 @@ struct PLAYER_NAME : public Player {
         bool moved = false;
         Pos p = citizen(id).pos;
         for(Dir d : dirs){
-          if(pos_ok(p+d)){
+          if(pos_street(p+d)){
             if(cell(p+d).id != -1 && citizen(cell(p+d).id).player != _me){
               int enemy_id = cell(p+d).id;
               if(citizen(enemy_id).type == Builder){
@@ -165,12 +179,20 @@ struct PLAYER_NAME : public Player {
         else if(pref4) move(id, pref4dir);
         else if(pref5) move(id, pref5dir);
         else{
-          while(!moved){
-            Dir nd = dirs[random(0,3)];
-            if(pos_ok(p+dirs[nd])){
-              move(id,nd);
-              moved = true;
-            }
+          if(citizen(id).weapon == Bazooka && citizen(id).life >= citizen_ini_life(Warrior)/2){
+            move(id, mejor_direccion(Enemigos,id));
+          }
+          else if(citizen(id).life <= citizen_ini_life(Warrior)/2){
+            move(id, mejor_direccion(Comida, id));
+          }
+          else if(citizen(id).weapon == Hammer){
+            move(id, mejor_direccion(Pistolas, id));
+          }
+          else if(citizen(id).weapon == Gun){
+            move(id,mejor_direccion(Bazookas, id));
+          }
+          else{
+            move(id,mejor_direccion(Dinero, id));
           }
         }
 
@@ -182,45 +204,44 @@ struct PLAYER_NAME : public Player {
         bool moved = false;
         Pos p = citizen(id).pos;
         for(Dir d : dirs){
-          if(pos_ok(p+d)){
+          if(pos_safe(p+d)){
             if(cell(p+d).bonus == Food && citizen(id).life <= citizen_ini_life(Builder)/2){pref1 = true; pref1dir = d;}
-            else if(citizen(cell(p+d).id).player != _me){pref2 = true; pref2dir = d;}
+            //else if(citizen(cell(p+d).id).player != _me){pref2 = true; pref2dir = d;}
             else if(cell(p+d).bonus == Money){pref3 = true; pref3dir = d;}
           }
         }
         if(pref1) move(id, pref1dir);
-        else if(pref2){
+        /*else if(pref2){
           switch(pref2dir){
             case Up:
-              if(pos_ok(p+Down) && cell(p+Down).id == -1){move(id, Down);}
-              else if(pos_ok(p+Left) && cell(p+Left).id == -1) {move(id, Left);}
-              else if(pos_ok(p+Right) && cell(p+Right).id == -1) {move(id, Right); }
+              if(pos_safe(p+Down) && cell(p+Down).id == -1){move(id, Down);}
+              else if(pos_safe(p+Left) && cell(p+Left).id == -1) {move(id, Left);}
+              else if(pos_safe(p+Right) && cell(p+Right).id == -1) {move(id, Right); }
               break; 
             case Down:
-              if(pos_ok(p+Up) && cell(p+Up).id == -1) {move(id, Up);  }
-              else if(pos_ok(p+Left) && cell(p+Left).id == -1) {move(id, Left);  }
-              else if(pos_ok(p+Right) && cell(p+Right).id == -1) {move(id, Right);  }
+              if(pos_safe(p+Up) && cell(p+Up).id == -1) {move(id, Up);  }
+              else if(pos_safe(p+Left) && cell(p+Left).id == -1) {move(id, Left);  }
+              else if(pos_safe(p+Right) && cell(p+Right).id == -1) {move(id, Right);  }
               break;
             case Left:
-              if(pos_ok(p+Up) && cell(p+Up).id == -1) {move(id, Up);  }
-              else if(pos_ok(p+Down) && cell(p+Down).id == -1) {move(id, Down);  }
-              else if(pos_ok(p+Right) && cell(p+Right).id == -1) {move(id, Right);  }
+              if(pos_safe(p+Up) && cell(p+Up).id == -1) {move(id, Up);  }
+              else if(pos_safe(p+Down) && cell(p+Down).id == -1) {move(id, Down);  }
+              else if(pos_safe(p+Right) && cell(p+Right).id == -1) {move(id, Right);  }
               break;
             case Right:
-              if(pos_ok(p+Up) && cell(p+Up).id == -1) {move(id, Up);  }
-              else if(pos_ok(p+Down) && cell(p+Down).id == -1) {move(id, Down);  }
-              else if(pos_ok(p+Left) && cell(p+Left).id == -1) {move(id, Left);  }
+              if(pos_safe(p+Up) && cell(p+Up).id == -1) {move(id, Up);  }
+              else if(pos_safe(p+Down) && cell(p+Down).id == -1) {move(id, Down);  }
+              else if(pos_safe(p+Left) && cell(p+Left).id == -1) {move(id, Left);  }
               break;
           }
-        }
+        }*/
         else if(pref3) move(id, pref3dir);
         else{
-          while(!moved){
-            Dir nd = dirs[random(0,3)];
-            if(pos_ok(p+dirs[nd])){
-              move(id,nd);
-              moved = true;
-            }
+          if(citizen(id).life <= citizen_ini_life(Builder)/2){
+            move(id, mejor_direccion(Comida, id));
+          }
+          else{
+            move(id,mejor_direccion(Dinero, id));
           }
         }
       }

@@ -11,6 +11,7 @@
         "xloctime": "cpp",
         "__locale": "cpp",
         "iosfwd": "cpp",
-        "iterator": "cpp"
+        "iterator": "cpp",
+        "cmath": "cpp"
     }
 }
