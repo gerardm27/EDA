@@ -211,7 +211,7 @@ struct PLAYER_NAME : public Player {
           }
         }
         if(pref1) move(id, pref1dir);
-        /*else if(pref2){
+        else if(pref2){
           switch(pref2dir){
             case Up:
               if(pos_safe(p+Down) && cell(p+Down).id == -1){move(id, Down);}
@@ -234,7 +234,7 @@ struct PLAYER_NAME : public Player {
               else if(pos_safe(p+Left) && cell(p+Left).id == -1) {move(id, Left);  }
               break;
           }
-        }*/
+        }
         else if(pref3) move(id, pref3dir);
         else{
           if(citizen(id).life <= citizen_ini_life(Builder)/2){
